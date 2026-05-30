@@ -5,6 +5,14 @@
 - Speichere den `gameState` nach jeder Aktion automatisch im `localStorage`, um Datenverlust beim Neuladen zu verhindern.
 - Trenne die UI-Logik (DOM-Manipulation) strikt von der Geschäftslogik (Spielregeln).
 
+# App-Zustände & Multi-Szenario
+- Die App startet **immer** im **Hauptmenü** mit `appState = 'menu'`.
+- Im Hauptmenü wählt der Nutzer ein Szenario (Daten aus `scenarios.js`, Regeltexte in `szenarien_regeln/`).
+- Erst nach bestätigter Szenario-Auswahl wechselt die App ins Dashboard: `appState = 'playing'`.
+- Beim Start einer Partie wird das gewählte Szenario in `gameState.currentScenario` gespeichert (Schlüssel z. B. `schiffbruechig`, `king_kong`) und die szenariospezifischen Startwerte aus `scenarios.js` in `gameState` übernommen (z. B. via `createInitialGameState()`).
+- Szenario-Metadaten (Name, Rundenlimit, Wetter, Sonder-Erfindungen/Aktionen) kommen aus `scenarios.js`; ausführliche Regeln aus den Markdown-Dateien unter `szenarien_regeln/`.
+- Zurück zum Menü: `appState = 'menu'` setzen; `gameState` zurücksetzen oder pro Partie-Slot in `localStorage` getrennt halten.
+
 # UI/UX Design
 - Optimiere das Layout zwingend für Tablets im Querformat (Landscape).
 - Nutze CSS Grid und Flexbox.
