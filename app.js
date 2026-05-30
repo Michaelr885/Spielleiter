@@ -1,18 +1,9 @@
 /**
  * Spielleiter – Controller
- * State Machine, UI-Sync und Persistenz
+ * State Machine, PhaseManager, UI-Sync und Persistenz
  */
 
 const STORAGE_KEY = 'spielleiter_gameState';
-
-const GAME_PHASES = [
-  { id: 'event', label: 'Ereignisphase' },
-  { id: 'morale', label: 'Moralphase' },
-  { id: 'production', label: 'Produktionsphase' },
-  { id: 'action', label: 'Aktionsphase' },
-  { id: 'weather', label: 'Wetterphase' },
-  { id: 'night', label: 'Nachtphase' },
-];
 
 /** @type {object} Globaler Spielstand */
 let gameState = createDefaultGameState();
@@ -21,9 +12,202 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 /**
- * Frischer Spielstand (Hauptmenü).
- * @returns {object}
+ * Phasen-Reihenfolge (Anzeigenamen wie am Tisch).
+ * Interne IDs für gameState.phase in Klammern.
  */
+const PHASE_MANAGER = {
+  phases: [
+    { name: 'Ereignisphase', id: 'event' },
+    { name: 'Moralphase', id: 'morale' },
+    { name: 'Produktionsphase', id: 'production' },
+    { name: 'Aktionsphase', id: 'action' },
+    { name: 'Wetterphase', id: 'weather' },
+    { name: 'Nachtphase', id: 'night' },
+  ],
+
+  /** Nur die Anzeigenamen */
+  get phaseNames() {
+    return this.phases.map((p) => p.name);
+  },
+
+  getIndexById(phaseId) {
+    return this.phases.findIndex((p) => p.id === phaseId);
+  },
+
+  getNameById(phaseId) {
+    return this.phases.find((p) => p.id === phaseId)?.name ?? phaseId;
+  },
+
+  /**
+   * Nächste Phase – wird vom Button „Nächste Phase“ aufgerufen.
+   */
+  goToNextPhase() {
+    if (gameState.phase === 'menu') return;
+
+    const currentId = gameState.phase;
+
+    if (currentId === 'night') {
+      this.endNightAndStartNewRound();
+      return;
+    }
+
+    let nextIndex = this.getIndexById(currentId) + 1;
+    if (nextIndex >= this.phases.length) {
+      nextIndex = 0;
+    }
+
+    if (gameState.round === 1 && this.phases[nextIndex].id === 'event') {
+      nextIndex = this.getIndexById('morale');
+    }
+
+    gameState.phase = this.phases[nextIndex].id;
+    this.onEnterPhase(gameState.phase);
+    updateUI();
+    saveGameState();
+  },
+
+  endNightAndStartNewRound() {
+    const maxRounds = gameState.maxRounds ?? 12;
+
+    if (gameState.round >= maxRounds) {
+      showModal({
+        title: 'Rundenlimit',
+        body: `Runde ${maxRounds} ist erreicht. Das Szenario endet – prüft die Siegbedingungen.`,
+        buttons: [{ label: 'Verstanden', primary: true }],
+      });
+      saveGameState();
+      return;
+    }
+
+    gameState.round += 1;
+    gameState.phase = 'event';
+    this.onEnterPhase('event');
+    updateUI();
+    saveGameState();
+  },
+
+  /**
+   * Automatische Checks beim Betreten einer Phase.
+   * @param {string} phaseId
+   */
+  onEnterPhase(phaseId) {
+    switch (phaseId) {
+      case 'morale':
+        this.handleMoralePhaseEnter();
+        break;
+      case 'production':
+        this.handleProductionPhaseEnter();
+        break;
+      case 'night':
+        this.handleNightPhaseEnter();
+        break;
+      case 'event':
+        if (gameState.round > 1) {
+          showModal({
+            title: 'Ereignisphase',
+            body: 'Zieht die oberste Ereigniskarte und führt das Sofortige Ereignis am Tisch aus.',
+            buttons: [{ label: 'Erledigt', primary: true }],
+          });
+        }
+        break;
+      default:
+        break;
+    }
+  },
+
+  handleMoralePhaseEnter() {
+    const moral = gameState.morale;
+
+    if (moral < 0) {
+      const amount = Math.min(3, Math.abs(moral));
+      showModal({
+        title: 'Moralphase',
+        body: `Du musst ${amount} Entschlossenheitsplättchen abgeben. Ziehe sie manuell ab oder trage dir Wunden ein.`,
+        buttons: [{ label: 'Verstanden', primary: true }],
+      });
+      return;
+    }
+
+    if (moral > 0) {
+      const amount = moral >= 2 ? 2 : 1;
+      showModal({
+        title: 'Moralphase',
+        body: `Du erhältst ${amount} Entschlossenheitsplättchen.`,
+        buttons: [{ label: 'Verstanden', primary: true }],
+      });
+      return;
+    }
+
+    showModal({
+      title: 'Moralphase',
+      body: 'Die Moral steht auf neutral (0). Keine Plättchen für den Startspieler.',
+      buttons: [{ label: 'Weiter', primary: true }],
+    });
+  },
+
+  handleProductionPhaseEnter() {
+    const body = document.createElement('div');
+    body.innerHTML = `
+      <p>Welche Ressourcen produziert dein aktuelles Lager-Inselteil?</p>
+      <p class="modal__hint">Tippe die Buttons – die Werte werden im Tracker links aktualisiert.</p>
+    `;
+
+    showModal({
+      title: 'Produktionsphase',
+      bodyEl: body,
+      buttons: [
+        {
+          label: '+ Holz',
+          className: 'btn-modal--resource',
+          onClick: () => {
+            gameState.resources.wood += 1;
+            updateUI();
+            saveGameState();
+          },
+        },
+        {
+          label: '+ Nahrung',
+          className: 'btn-modal--resource',
+          onClick: () => {
+            gameState.resources.food += 1;
+            updateUI();
+            saveGameState();
+          },
+        },
+        { label: 'Fertig', primary: true },
+      ],
+      stackActions: true,
+    });
+  },
+
+  handleNightPhaseEnter() {
+    const nahrung = gameState.resources.food;
+    const spieler = gameState.playerCount;
+
+    if (nahrung >= spieler) {
+      gameState.resources.food -= spieler;
+      syncGlobalState();
+      updateUI();
+      showModal({
+        title: 'Nachtphase',
+        body: `${spieler} Nahrung wurde abgezogen (${gameState.resources.food} verbleibend). Jeder Charakter isst.`,
+        buttons: [{ label: 'Weiter', primary: true }],
+      });
+      saveGameState();
+      return;
+    }
+
+    showModal({
+      title: 'Nachtphase – Warnung',
+      body: `Zu wenig Nahrung! (${nahrung}/${spieler} verfügbar). Trage Wunden für hungernde Spieler ein.`,
+      buttons: [{ label: 'Verstanden', primary: true, warn: true }],
+    });
+  },
+};
+
+/** Öffentliches Array der Phasennamen (laut Anforderung) */
+const PHASE_NAMES = PHASE_MANAGER.phaseNames;
+
 function createDefaultGameState() {
   return {
     phase: 'menu',
@@ -31,6 +215,7 @@ function createDefaultGameState() {
     currentScenario: null,
     scenarioName: '',
     maxRounds: 12,
+    playerCount: 4,
     resources: {
       wood: 0,
       food: 0,
@@ -46,11 +231,6 @@ function createDefaultGameState() {
   };
 }
 
-/**
- * Szenario anhand Schlüssel (schiffbruechig) oder numerischer ID (1–7) finden.
- * @param {string|number} scenarioId
- * @returns {object|undefined}
- */
 function resolveScenario(scenarioId) {
   if (scenarioId == null) return undefined;
 
@@ -62,10 +242,6 @@ function resolveScenario(scenarioId) {
   return getScenario(String(scenarioId));
 }
 
-/**
- * Partie starten: Szenario laden, Ansicht wechseln, speichern.
- * @param {string|number} scenarioId
- */
 function startGame(scenarioId) {
   const scenario = resolveScenario(scenarioId);
   if (!scenario) {
@@ -88,12 +264,9 @@ function startGame(scenarioId) {
 
   showDashboard();
   updateUI();
+  PHASE_MANAGER.onEnterPhase('morale');
   saveGameState();
 }
-
-/**
- * Hauptmenü anzeigen, Dashboard ausblenden.
- */
 
 function syncGlobalState() {
   if (typeof window !== 'undefined') {
@@ -106,17 +279,11 @@ function showMenu() {
   $('#game-dashboard')?.classList.remove('view--active');
 }
 
-/**
- * Dashboard anzeigen, Hauptmenü ausblenden.
- */
 function showDashboard() {
   $('#main-menu')?.classList.remove('view--active');
   $('#game-dashboard')?.classList.add('view--active');
 }
 
-/**
- * DOM anhand von gameState aktualisieren.
- */
 function updateUI() {
   if (gameState.phase === 'menu') {
     showMenu();
@@ -127,7 +294,7 @@ function updateUI() {
 
   $('#dash-scenario-name').textContent = gameState.scenarioName || '—';
   $('#dash-round').textContent = String(gameState.round);
-  $('#dash-phase').textContent = getPhaseLabel(gameState.phase);
+  $('#dash-phase').textContent = PHASE_MANAGER.getNameById(gameState.phase);
 
   setTrackerDisplay('wood', gameState.resources.wood);
   setTrackerDisplay('food', gameState.resources.food);
@@ -136,31 +303,16 @@ function updateUI() {
   setTrackerDisplay('palisade', gameState.camp.palisade);
   setTrackerDisplay('weapon', gameState.camp.weapon);
   setTrackerDisplay('morale', gameState.morale);
+
+  const playersEl = $('#val-players');
+  if (playersEl) playersEl.textContent = String(gameState.playerCount);
 }
 
-/**
- * @param {string} key
- * @param {number} value
- */
 function setTrackerDisplay(key, value) {
   const el = $(`#val-${key}`);
   if (el) el.textContent = String(value);
 }
 
-/**
- * @param {string} phaseId
- * @returns {string}
- */
-function getPhaseLabel(phaseId) {
-  if (phaseId === 'menu') return 'Hauptmenü';
-  return GAME_PHASES.find((p) => p.id === phaseId)?.label ?? phaseId;
-}
-
-/**
- * Ressource oder Stärke per Tracker-Key anpassen.
- * @param {string} key
- * @param {number} delta
- */
 function adjustResource(key, delta) {
   if (gameState.phase === 'menu') return;
 
@@ -170,60 +322,86 @@ function adjustResource(key, delta) {
     gameState.resources[key] = Math.max(0, gameState.resources[key] + delta);
   } else if (key in gameState.camp) {
     gameState.camp[key] = Math.max(0, gameState.camp[key] + delta);
+  } else if (key === 'players') {
+    gameState.playerCount = Math.max(1, Math.min(4, gameState.playerCount + delta));
   } else {
     return;
   }
 
+  syncGlobalState();
   updateUI();
   saveGameState();
 }
 
 /**
- * Nächste Spielphase (Runden-Ende → neue Runde).
+ * Button „Nächste Phase“ – delegiert an PhaseManager.
  */
 function nextPhase() {
-  if (gameState.phase === 'menu') return;
-
-  const idx = GAME_PHASES.findIndex((p) => p.id === gameState.phase);
-  let nextIdx = idx + 1;
-
-  if (nextIdx >= GAME_PHASES.length) {
-    const maxRounds = gameState.maxRounds ?? 12;
-    if (gameState.round >= maxRounds) {
-      saveGameState();
-      return;
-    }
-
-    gameState.round += 1;
-    nextIdx = gameState.round === 1
-      ? GAME_PHASES.findIndex((p) => p.id === 'morale')
-      : 0;
-  }
-
-  if (gameState.round === 1 && GAME_PHASES[nextIdx]?.id === 'event') {
-    nextIdx = GAME_PHASES.findIndex((p) => p.id === 'morale');
-  }
-
-  gameState.phase = GAME_PHASES[nextIdx].id;
-  updateUI();
-  saveGameState();
+  PHASE_MANAGER.goToNextPhase();
 }
 
 /**
- * gameState in localStorage speichern.
+ * @param {object} options
+ * @param {string} options.title
+ * @param {string} [options.body]
+ * @param {HTMLElement} [options.bodyEl]
+ * @param {Array<{label: string, primary?: boolean, warn?: boolean, className?: string, onClick?: function}>} options.buttons
+ * @param {boolean} [options.stackActions]
  */
+function showModal({ title, body, bodyEl, buttons = [], stackActions = false }) {
+  const root = $('#modal-root');
+  const titleEl = $('#modal-title');
+  const bodyContainer = $('#modal-body');
+  const actionsEl = $('#modal-actions');
+
+  if (!root || !titleEl || !bodyContainer || !actionsEl) return;
+
+  titleEl.textContent = title;
+  bodyContainer.innerHTML = '';
+  if (bodyEl) {
+    bodyContainer.appendChild(bodyEl);
+  } else {
+    bodyContainer.innerHTML = `<p>${body ?? ''}</p>`;
+  }
+
+  actionsEl.innerHTML = '';
+  actionsEl.classList.toggle('modal__actions--stack', stackActions);
+
+  buttons.forEach((btn) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.textContent = btn.label;
+    el.className = 'btn-modal';
+    if (btn.primary) el.classList.add('btn-modal--primary');
+    if (btn.warn) el.classList.add('btn-modal--warn');
+    if (btn.className) el.classList.add(btn.className);
+    el.addEventListener('click', () => {
+      if (btn.onClick) btn.onClick();
+      if (btn.close !== false) hideModal();
+    });
+    actionsEl.appendChild(el);
+  });
+
+  root.hidden = false;
+  root.setAttribute('aria-hidden', 'false');
+}
+
+function hideModal() {
+  const root = $('#modal-root');
+  if (!root) return;
+  root.hidden = true;
+  root.setAttribute('aria-hidden', 'true');
+}
+
 function saveGameState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+    syncGlobalState();
   } catch (err) {
     console.error('Speichern fehlgeschlagen:', err);
   }
 }
 
-/**
- * gameState aus localStorage laden und mit Defaults mergen.
- * @returns {boolean} true wenn ein Stand geladen wurde
- */
 function loadGameState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -238,11 +416,6 @@ function loadGameState() {
   }
 }
 
-/**
- * Gespeicherten Stand mit Default-Struktur abgleichen.
- * @param {object} saved
- * @returns {object}
- */
 function mergeWithDefaults(saved) {
   const defaults = createDefaultGameState();
   return {
@@ -290,7 +463,13 @@ function bindEvents() {
     });
   });
 
+  $('#btn-players-inc')?.addEventListener('click', () => adjustResource('players', 1));
+  $('#btn-players-dec')?.addEventListener('click', () => adjustResource('players', -1));
   $('#btn-next-phase')?.addEventListener('click', nextPhase);
+
+  $$('[data-modal-close]').forEach((el) => {
+    el.addEventListener('click', hideModal);
+  });
 }
 
 function init() {
@@ -310,9 +489,14 @@ function init() {
 document.addEventListener('DOMContentLoaded', init);
 
 if (typeof window !== 'undefined') {
+  window.PHASE_NAMES = PHASE_NAMES;
+  window.PHASE_MANAGER = PHASE_MANAGER;
   window.startGame = startGame;
   window.updateUI = updateUI;
+  window.nextPhase = nextPhase;
   window.saveGameState = saveGameState;
   window.loadGameState = loadGameState;
+  window.showModal = showModal;
+  window.hideModal = hideModal;
   syncGlobalState();
 }
