@@ -1,0 +1,12 @@
+# Technologie & Architektur
+- Nutze ausschließlich HTML5, CSS3 und Vanilla JavaScript.
+- Verwende KEINE Build-Tools (kein Node, Webpack, Vite etc.) und keine externen Frameworks. Die App muss als einfache statische Webseite auf einem lokalen Webserver laufen können.
+- Implementiere die Spiellogik als strikte State Machine (Zustandsautomat). Der gesamte Spielstand wird zentral im Objekt `gameState` verwaltet.
+- Speichere den `gameState` nach jeder Aktion automatisch im `localStorage`, um Datenverlust beim Neuladen zu verhindern.
+- Trenne die UI-Logik (DOM-Manipulation) strikt von der Geschäftslogik (Spielregeln).
+
+# UI/UX Design
+- Optimiere das Layout zwingend für Tablets im Querformat (Landscape).
+- Nutze CSS Grid und Flexbox.
+- Verwende ein dunkles, modernes Dashboard-Layout (Dark Mode).
+- Ersetze Standard-Browser-Alerts durch eigene, schön gestaltete HTML/CSS-Modals.
