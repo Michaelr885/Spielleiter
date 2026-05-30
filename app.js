@@ -11,6 +11,11 @@ let gameState = createDefaultGameState();
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+/** Inline-SVG aus dem Sprite (symbol-Id ohne #) */
+function resourceIcon(symbolId) {
+  return `<svg class="resource-icon" aria-hidden="true"><use href="#icon-${symbolId}"/></svg>`;
+}
+
 /**
  * Phasen-Reihenfolge (Anzeigenamen wie am Tisch).
  * Interne IDs für gameState.phase in Klammern.
@@ -532,7 +537,10 @@ function calculateCombat() {
         <p><strong>Kampf beendet!</strong></p>
         <p>Deine Waffenstärke ist jetzt auf <strong>${waffenstaerke}</strong>.</p>
         <p>Deine Palisade ist auf <strong>${palisade}</strong>.</p>
-        <p>Du musst <strong>${erlitteneWunden}</strong> Wunde${erlitteneWunden === 1 ? '' : 'n'} verteilen!</p>
+        <p class="combat-result__wounds">
+          ${resourceIcon('wound')}
+          <span>Du musst <strong>${erlitteneWunden}</strong> Wunde${erlitteneWunden === 1 ? '' : 'n'} verteilen!</span>
+        </p>
       </div>
     `;
   }
