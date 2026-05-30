@@ -426,6 +426,137 @@ function mergeWithDefaults(saved) {
   };
 }
 
+
+/** Vorschau/Ergebnis eines Kampfes bis zur Bestätigung */
+let pendingCombatResult = null;
+
+function getWaffenstaerke() {
+  return gameState.camp.weapon;
+}
+
+function setWaffenstaerke(value) {
+  gameState.camp.weapon = Math.max(0, value);
+}
+
+function getPalisadenstaerke() {
+  return gameState.camp.palisade;
+}
+
+function setPalisadenstaerke(value) {
+  gameState.camp.palisade = Math.max(0, value);
+}
+
+function openCombatModal() {
+  if (gameState.phase === 'menu') return;
+
+  pendingCombatResult = null;
+  const formView = $('#combat-form-view');
+  const resultView = $('#combat-result-view');
+
+  if (formView) formView.hidden = false;
+  if (resultView) resultView.hidden = true;
+
+  const tier = $('#combat-tier-strength');
+  const weaponLower = $('#combat-weapon-lower');
+  const palisadeLower = $('#combat-palisade-lower');
+
+  if (tier) tier.value = '0';
+  if (weaponLower) weaponLower.value = '0';
+  if (palisadeLower) palisadeLower.value = '0';
+
+  $('#combat-current-weapon').textContent = String(getWaffenstaerke());
+  $('#combat-current-palisade').textContent = String(getPalisadenstaerke());
+
+  const root = $('#combat-modal');
+  if (root) {
+    root.hidden = false;
+    root.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function closeCombatModal() {
+  const root = $('#combat-modal');
+  if (root) {
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+  }
+  pendingCombatResult = null;
+}
+
+/**
+ * Robinson-Crusoe-Kampfregeln (Jagen / Ereigniskarten).
+ * Nutzt gameState.camp.weapon als Waffenstärke und gameState.camp.palisade als Palisade.
+ */
+function calculateCombat() {
+  if (gameState.phase === 'menu') return;
+
+  const tierstaerke = Math.max(0, parseInt($('#combat-tier-strength')?.value, 10) || 0);
+  const waffenSenken = Math.max(0, parseInt($('#combat-weapon-lower')?.value, 10) || 0);
+  const palisadeSenken = Math.max(0, parseInt($('#combat-palisade-lower')?.value, 10) || 0);
+
+  let erlitteneWunden = 0;
+  let waffenstaerke = getWaffenstaerke();
+  let palisade = getPalisadenstaerke();
+
+  // Regel 1: Tierstärke vs. Waffenstärke
+  if (tierstaerke > waffenstaerke) {
+    erlitteneWunden += tierstaerke - waffenstaerke;
+  }
+
+  // Regel 2: Waffenstärke senken
+  if (waffenSenken > waffenstaerke) {
+    erlitteneWunden += waffenSenken - waffenstaerke;
+    waffenstaerke = 0;
+  } else {
+    waffenstaerke -= waffenSenken;
+  }
+
+  // Regel 3: Palisadenstärke senken
+  if (palisadeSenken > palisade) {
+    erlitteneWunden += palisadeSenken - palisade;
+    palisade = 0;
+  } else {
+    palisade -= palisadeSenken;
+  }
+
+  pendingCombatResult = {
+    erlitteneWunden,
+    waffenstaerke,
+    palisade,
+  };
+
+  const resultBody = $('#combat-result-body');
+  if (resultBody) {
+    resultBody.innerHTML = `
+      <div class="combat-result">
+        <p><strong>Kampf beendet!</strong></p>
+        <p>Deine Waffenstärke ist jetzt auf <strong>${waffenstaerke}</strong>.</p>
+        <p>Deine Palisade ist auf <strong>${palisade}</strong>.</p>
+        <p>Du musst <strong>${erlitteneWunden}</strong> Wunde${erlitteneWunden === 1 ? '' : 'n'} verteilen!</p>
+      </div>
+    `;
+  }
+
+  $('#combat-form-view').hidden = true;
+  $('#combat-result-view').hidden = false;
+}
+
+function confirmCombatResult() {
+  if (!pendingCombatResult) {
+    closeCombatModal();
+    return;
+  }
+
+  setWaffenstaerke(pendingCombatResult.waffenstaerke);
+  setPalisadenstaerke(pendingCombatResult.palisade);
+
+  syncGlobalState();
+  closeCombatModal();
+  updateUI();
+  saveGameState();
+}
+
+
 function renderScenarioButtons() {
   const container = $('#scenario-list');
   if (!container || typeof SCENARIO_LIST === 'undefined') return;
@@ -466,9 +597,21 @@ function bindEvents() {
   $('#btn-players-inc')?.addEventListener('click', () => adjustResource('players', 1));
   $('#btn-players-dec')?.addEventListener('click', () => adjustResource('players', -1));
   $('#btn-next-phase')?.addEventListener('click', nextPhase);
+  $('#btn-combat')?.addEventListener('click', openCombatModal);
+  $('#btn-combat-calculate')?.addEventListener('click', calculateCombat);
+  $('#btn-combat-confirm')?.addEventListener('click', confirmCombatResult);
 
   $$('[data-modal-close]').forEach((el) => {
     el.addEventListener('click', hideModal);
+  });
+
+  $$('[data-combat-close]').forEach((el) => {
+    el.addEventListener('click', closeCombatModal);
+  });
+
+  $('#combat-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    calculateCombat();
   });
 }
 
@@ -498,5 +641,8 @@ if (typeof window !== 'undefined') {
   window.loadGameState = loadGameState;
   window.showModal = showModal;
   window.hideModal = hideModal;
+  window.openCombatModal = openCombatModal;
+  window.calculateCombat = calculateCombat;
+  window.confirmCombatResult = confirmCombatResult;
   syncGlobalState();
 }

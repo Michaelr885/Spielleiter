@@ -116,17 +116,66 @@
           <main class="main-panel" aria-label="Spielaktionen">
             <div class="main-panel__placeholder">
               <p class="main-panel__hint">
-                Hier erscheinen später die dynamischen Aktions-Buttons und Meldungen.
+                Tragt Ergebnisse am Tisch per Tracker ein – die App führt durch die Phasen.
               </p>
-              <button type="button" id="btn-next-phase" class="btn-primary">
-                Nächste Phase
-              </button>
+              <div class="main-panel__actions">
+                <button type="button" id="btn-combat" class="btn-secondary">
+                  Kampf auswerten
+                </button>
+                <button type="button" id="btn-next-phase" class="btn-primary">
+                  Nächste Phase
+                </button>
+              </div>
             </div>
           </main>
         </div>
       </section>
     </div>
 
+
+
+    <div id="combat-modal" class="combat-modal" hidden aria-hidden="true">
+      <div class="modal-backdrop" data-combat-close></div>
+      <div class="modal combat-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="combat-modal-title">
+        <h2 id="combat-modal-title" class="modal__title">Kampf auswerten</h2>
+
+        <div id="combat-form-view" class="combat-modal__view">
+          <form id="combat-form" class="combat-form">
+            <label class="combat-form__field">
+              <span class="combat-form__label">Stärke des Tiers</span>
+              <input type="number" id="combat-tier-strength" class="combat-form__input" min="0" value="0" />
+            </label>
+            <label class="combat-form__field">
+              <span class="combat-form__label">Waffenstärke senken um</span>
+              <input type="number" id="combat-weapon-lower" class="combat-form__input" min="0" value="0" />
+            </label>
+            <label class="combat-form__field">
+              <span class="combat-form__label">Palisadenstärke senken um</span>
+              <input type="number" id="combat-palisade-lower" class="combat-form__input" min="0" value="0" />
+            </label>
+            <p class="combat-form__hint">
+              Aktuelle Waffenstärke: <strong id="combat-current-weapon">0</strong> ·
+              Palisade: <strong id="combat-current-palisade">0</strong>
+            </p>
+          </form>
+          <div class="modal__actions">
+            <button type="button" class="btn-modal" data-combat-close>Abbrechen</button>
+            <button type="button" id="btn-combat-calculate" class="btn-modal btn-modal--primary">
+              Kampf berechnen
+            </button>
+          </div>
+        </div>
+
+        <div id="combat-result-view" class="combat-modal__view" hidden>
+          <div id="combat-result-body" class="modal__body"></div>
+          <div class="modal__actions">
+            <button type="button" id="btn-combat-confirm" class="btn-modal btn-modal--primary">
+              Übernehmen &amp; schließen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div id="modal-root" class="modal-root" hidden aria-hidden="true">
       <div class="modal-backdrop" data-modal-close></div>
