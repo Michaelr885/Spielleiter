@@ -5,18 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Spielleiter – Robinson Crusoe Companion" />
     <title>Spielleiter</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="app">
       <!-- Ansicht 1: Hauptmenü -->
       <section id="main-menu" class="view view--active" aria-label="Hauptmenü">
+        <div class="menu-shell">
         <header class="menu-header">
           <p class="menu-eyebrow">Robinson Crusoe</p>
           <h1 class="menu-title">Spielleiter</h1>
           <p class="menu-subtitle">Wähle ein Szenario für deine Partie</p>
         </header>
         <div id="scenario-list" class="scenario-grid" role="list"></div>
+        </div>
       </section>
 
       <!-- Ansicht 2: Dashboard -->
@@ -26,21 +34,12 @@
             <span class="dash-label">Szenario</span>
             <p id="dash-scenario-name" class="dash-scenario-name">—</p>
             <div class="dash-toolbar">
-              <button type="button" id="btn-save-game" class="btn-toolbar">
-                Speichern
-              </button>
-              <button type="button" id="btn-export-json" class="btn-toolbar">
-                JSON speichern
-              </button>
-              <button type="button" id="btn-load-json" class="btn-toolbar">
-                JSON laden
-              </button>
-              <input
-                type="file"
-                id="input-load-json"
-                accept=".json,application/json"
-                hidden
-              />
+              <div class="dash-toolbar__group">
+                <button type="button" id="btn-save-game" class="btn-toolbar">Speichern</button>
+                <button type="button" id="btn-export-json" class="btn-toolbar">JSON export</button>
+                <button type="button" id="btn-load-json" class="btn-toolbar">JSON import</button>
+                <input type="file" id="input-load-json" accept=".json,application/json" hidden />
+              </div>
               <span id="save-feedback" class="save-feedback" hidden aria-live="polite"></span>
               <button type="button" id="btn-reset-game" class="btn-toolbar btn-toolbar--danger">
                 Mission wechseln
@@ -48,10 +47,12 @@
             </div>
           </div>
           <div class="dash-header__hero" aria-live="polite">
-            <p class="dash-hero__round">
-              Runde <span id="dash-round" class="dash-hero__round-num">1</span>
-            </p>
-            <h2 id="dash-phase" class="dash-hero__phase">Ereignisphase</h2>
+            <div class="hero-card">
+              <p class="dash-hero__round">
+                Runde <span id="dash-round" class="dash-hero__round-num">1</span>
+              </p>
+              <h2 id="dash-phase" class="dash-hero__phase">Ereignisphase</h2>
+            </div>
           </div>
           <div class="dash-header__players">
             <span class="dash-label">Spieler</span>
@@ -135,7 +136,7 @@
           </aside>
 
           <main class="main-panel" aria-label="Spielaktionen">
-            <div class="main-panel__placeholder">
+            <div class="main-panel__placeholder action-card">
               <p class="main-panel__hint">
                 Tragt Ergebnisse am Tisch per Tracker ein – die App führt durch die Phasen.
               </p>

@@ -285,6 +285,9 @@ function showDashboard() {
 }
 
 function updateUI() {
+  document.body.classList.toggle('app--menu', gameState.phase === 'menu');
+  document.body.classList.toggle('app--game', gameState.phase !== 'menu');
+
   if (gameState.phase === 'menu') {
     showMenu();
     return;
@@ -715,9 +718,18 @@ function renderScenarioButtons() {
     if (scenario.isExpansion) btn.classList.add('btn-scenario--expansion');
     btn.setAttribute('role', 'listitem');
 
+    const badgeLabel = scenario.isExpansion
+      ? 'Zusatzszenario'
+      : `Szenario ${scenario.id}`;
+    const badgeClass = scenario.isExpansion ? ' btn-scenario__badge--expansion' : '';
+
     btn.innerHTML = `
+      <span class="btn-scenario__top">
+        <span class="btn-scenario__badge${badgeClass}">${badgeLabel}</span>
+        <span class="btn-scenario__difficulty" aria-label="Schwierigkeit ${scenario.difficulty}">★ ${scenario.difficulty}</span>
+      </span>
       <span class="btn-scenario__name">${scenario.name}</span>
-      <span class="btn-scenario__meta">${scenario.maxRounds} Runden · Schwierigkeit ${scenario.difficulty}${scenario.isExpansion ? ' · Zusatz' : ''}</span>
+      <span class="btn-scenario__meta">${scenario.maxRounds} Runden</span>
       <span class="btn-scenario__desc">${scenario.description}</span>
     `;
 
