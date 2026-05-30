@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Spielleiter – Robinson Crusoe Companion" />
+    <title>Spielleiter</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Ansicht 1: Hauptmenü -->
+      <section id="main-menu" class="view view--active" aria-label="Hauptmenü">
+        <header class="menu-header">
+          <p class="menu-eyebrow">Robinson Crusoe</p>
+          <h1 class="menu-title">Spielleiter</h1>
+          <p class="menu-subtitle">Wähle ein Szenario für deine Partie</p>
+        </header>
+        <div id="scenario-list" class="scenario-grid" role="list"></div>
+      </section>
+
+      <!-- Ansicht 2: Dashboard -->
+      <section id="game-dashboard" class="view" aria-label="Spiel-Dashboard" hidden>
+        <header class="dash-header">
+          <div class="dash-header__info">
+            <span class="dash-label">Szenario</span>
+            <h2 id="dash-scenario-name" class="dash-scenario-name">—</h2>
+          </div>
+          <div class="dash-header__stats">
+            <div class="dash-stat">
+              <span class="dash-label">Runde</span>
+              <span id="dash-round" class="dash-stat-value">1</span>
+            </div>
+            <div class="dash-stat dash-stat--phase">
+              <span class="dash-label">Phase</span>
+              <span id="dash-phase" class="dash-stat-value">Ereignisphase</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="dash-grid">
+          <aside class="sidebar" aria-label="Ressourcen und Stärken">
+            <h3 class="sidebar-title">Status</h3>
+            <ul class="tracker-list">
+              <li class="tracker" data-track="wood">
+                <span class="tracker__icon" aria-hidden="true">🪵</span>
+                <span class="tracker__label">Holz</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Holz verringern">−</button>
+                  <span class="tracker__value" id="val-wood">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Holz erhöhen">+</button>
+                </div>
+              </li>
+              <li class="tracker" data-track="food">
+                <span class="tracker__icon" aria-hidden="true">🍖</span>
+                <span class="tracker__label">Nahrung</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Nahrung verringern">−</button>
+                  <span class="tracker__value" id="val-food">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Nahrung erhöhen">+</button>
+                </div>
+              </li>
+              <li class="tracker" data-track="fur">
+                <span class="tracker__icon" aria-hidden="true">🧶</span>
+                <span class="tracker__label">Felle</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Felle verringern">−</button>
+                  <span class="tracker__value" id="val-fur">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Felle erhöhen">+</button>
+                </div>
+              </li>
+              <li class="tracker tracker--divider" aria-hidden="true"></li>
+              <li class="tracker" data-track="roof">
+                <span class="tracker__icon" aria-hidden="true">🏠</span>
+                <span class="tracker__label">Dachstärke</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Dachstärke verringern">−</button>
+                  <span class="tracker__value" id="val-roof">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Dachstärke erhöhen">+</button>
+                </div>
+              </li>
+              <li class="tracker" data-track="palisade">
+                <span class="tracker__icon" aria-hidden="true">🛡️</span>
+                <span class="tracker__label">Palisade</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Palisade verringern">−</button>
+                  <span class="tracker__value" id="val-palisade">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Palisade erhöhen">+</button>
+                </div>
+              </li>
+              <li class="tracker" data-track="weapon">
+                <span class="tracker__icon" aria-hidden="true">⚔️</span>
+                <span class="tracker__label">Waffenstärke</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Waffenstärke verringern">−</button>
+                  <span class="tracker__value" id="val-weapon">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Waffenstärke erhöhen">+</button>
+                </div>
+              </li>
+              <li class="tracker" data-track="morale">
+                <span class="tracker__icon" aria-hidden="true">💪</span>
+                <span class="tracker__label">Moral</span>
+                <div class="tracker__controls">
+                  <button type="button" class="btn-counter" data-action="dec" aria-label="Moral verringern">−</button>
+                  <span class="tracker__value" id="val-morale">0</span>
+                  <button type="button" class="btn-counter" data-action="inc" aria-label="Moral erhöhen">+</button>
+                </div>
+              </li>
+            </ul>
+          </aside>
+
+          <main class="main-panel" aria-label="Spielaktionen">
+            <div class="main-panel__placeholder">
+              <p class="main-panel__hint">
+                Hier erscheinen später die dynamischen Aktions-Buttons und Meldungen.
+              </p>
+              <button type="button" id="btn-next-phase" class="btn-primary">
+                Nächste Phase
+              </button>
+            </div>
+          </main>
+        </div>
+      </section>
+    </div>
+
+    <script src="scenarios.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
