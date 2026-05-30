@@ -162,7 +162,7 @@ effect:
 | Ohne Betäubungsmittel | −5 auf effektive Waffenstärke (nur für diesen Kampf) |
 | Mit Betäubungsmittel gebaut | −1 |
 
-**Ablauf:** Standard-Kampf (wie `aktionen.md` → Jagen), gegen King Kong laut Szenariotafel (Stärke/Effekte auf Tafel; Kampfbox „IM KAMPF GEGEN KING KONG“).
+**Ablauf:** Standard-Kampf (wie `../aktionen.md` → Jagen), gegen King Kong laut Szenariotafel (Stärke/Effekte auf Tafel; Kampfbox „IM KAMPF GEGEN KING KONG“).
 
 **Konsequenzen:**
 | ergebnis | effekt |
@@ -255,8 +255,8 @@ special_tokens:
 
 | thema | datei |
 |-------|--------|
-| Phasenablauf | `phasen.md` |
-| Standard-Aktionen, Kampf, Würfel | `aktionen.md` |
-| Unerfüllter Bedarf, Moral, Nahrung | `phasen.md` |
+| Phasenablauf | `../phasen.md` |
+| Standard-Aktionen, Kampf, Würfel | `../aktionen.md` |
+| Unerfüllter Bedarf, Moral, Nahrung | `../phasen.md` |
 
 Bei Konflikt gilt **diese Datei** für King-Kong-Sonderfälle; sonst Basisregeln.
