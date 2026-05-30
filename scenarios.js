@@ -319,6 +319,97 @@ const SCENARIOS = {
       { id: 'film_crew_lost_item', name: 'Verlorener Filmcrew-Gegenstand' },
     ],
   },
+
+  naturforscher: {
+    id: 8,
+    key: 'naturforscher',
+    name: 'Der Naturforscher',
+    description:
+      'Schatztruhe: Zwei Szenariotafeln, Charles Darwin als NPC. Sammelt einzigartige Fische, Vögel und botanische Proben sowie Fossilien – Sieg laut vorteilhaften Bedingungen auf den Tafeln.',
+    difficulty: 4,
+    maxRounds: 12,
+    isExpansion: true,
+    rulesFile: 'szenarien_regeln/szenario_8_naturforscher.md',
+    rulesPdf: 'Robinson_Crusoe_Szenario_Naturforscher.pdf',
+    eventCardsPerDeck: 6,
+    setup: {
+      startIslandTile: 8,
+      startItems: 'random_2',
+      scenarioBoardCount: 2,
+      npcDarwin: true,
+    },
+    startWeather: [
+      { fromRound: 1, toRound: 3, dice: [] },
+      { fromRound: 4, toRound: 6, dice: ['rain'] },
+      { fromRound: 7, toRound: 12, dice: ['rain', 'winter', 'beast'] },
+    ],
+    specialInventions: [
+      { id: 'damm', name: 'Damm', type: 'invention', note: 'Einzigartige Fische lagern' },
+      { id: 'gehege', name: 'Gehege', type: 'invention', note: 'Außergewöhnliche Vögel lagern' },
+      { id: 'gewaechshaus', name: 'Gewächshaus', type: 'invention', note: 'Botanische Proben lagern' },
+      { id: 'schaufel', name: 'Schaufel', type: 'invention', note: 'Für Fossilien sammeln' },
+    ],
+    specialActions: [
+      {
+        id: 'collect_fossils',
+        name: 'Fossilien sammeln',
+        type: 'gather',
+        requiresInvention: 'schaufel',
+        terrain: ['hill', 'cave'],
+      },
+    ],
+    discoveryTokens: [],
+  },
+
+  schatzsuche: {
+    id: 9,
+    key: 'schatzsuche',
+    name: 'Schatzsuche',
+    description:
+      'Schatztruhe (Szenario 9): Mit Nick zur Schatzinsel – auf 4 Höhlen-Inselteilen Schatzsuche, Brief des alten Piraten finden und mit 20 Gold die Insel verlassen.',
+    difficulty: 5,
+    maxRounds: 12,
+    isExpansion: true,
+    rulesFile: 'szenarien_regeln/szenario_9_schatzsuche.md',
+    rulesPdf: 'Robinson_Crusoe_Szenario_Schatzsuche.pdf',
+    eventCardsPerDeck: 6,
+    setup: {
+      startIslandTile: 8,
+      startItems: ['leere_flasche', 'random_1'],
+      excludedStartItems: ['wetterglas'],
+      prebuiltInventions: ['schaufel'],
+      removeBeastCardsStrengthAbove: 5,
+      noHuntDeck: true,
+      captainChestOnThreatField: true,
+      pirateLetters: 8,
+      fundstueckeDeck: true,
+    },
+    startWeather: [
+      { fromRound: 1, toRound: 3, dice: [] },
+      { fromRound: 4, toRound: 6, dice: ['rain'] },
+      { fromRound: 7, toRound: 12, dice: ['rain', 'winter', 'beast'] },
+    ],
+    specialInventions: [],
+    specialActions: [
+      {
+        id: 'schatzsuche',
+        name: 'Schatzsuche',
+        type: 'gather',
+        terrain: ['cave'],
+        successDiceOnly: true,
+        winTarget: 4,
+        note: '4 verschiedene Höhlen-Inselteile',
+      },
+      {
+        id: 'leave_island',
+        name: 'Insel verlassen (Nick)',
+        type: 'phase_action',
+        phase: 'night_start',
+        requiresGold: 20,
+      },
+    ],
+    discoveryTokens: [],
+  },
 };
 
 /** Alle Szenario-Schlüssel in Menü-Reihenfolge */
@@ -330,6 +421,8 @@ const SCENARIO_LIST = [
   SCENARIOS.kannibaleninsel,
   SCENARIOS.familie_robinson,
   SCENARIOS.king_kong,
+  SCENARIOS.naturforscher,
+  SCENARIOS.schatzsuche,
 ];
 
 /**
