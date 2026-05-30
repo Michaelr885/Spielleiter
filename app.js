@@ -72,14 +72,10 @@ function setView(viewName) {
 
   if (viewName === 'menu') {
     menu.classList.add('view--active');
-    menu.hidden = false;
     dashboard.classList.remove('view--active');
-    dashboard.hidden = true;
   } else {
     menu.classList.remove('view--active');
-    menu.hidden = true;
     dashboard.classList.add('view--active');
-    dashboard.hidden = false;
   }
 }
 
