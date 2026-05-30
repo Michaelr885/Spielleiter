@@ -1,17 +1,11 @@
 /**
- * Spielleiter – App-Steuerung (UI-Schicht)
- * Geschäftslogik und State Machine werden hier schrittweise erweitert.
+ * Spielleiter – Controller
+ * State Machine, UI-Sync und Persistenz
  */
 
-const STORAGE_KEY = 'spielleiter_save';
+const STORAGE_KEY = 'spielleiter_gameState';
 
-/** @type {'menu' | 'playing'} */
-let appState = 'menu';
-
-/** @type {object|null} */
-let gameState = null;
-
-const PHASES = [
+const GAME_PHASES = [
   { id: 'event', label: 'Ereignisphase' },
   { id: 'morale', label: 'Moralphase' },
   { id: 'production', label: 'Produktionsphase' },
@@ -20,63 +14,243 @@ const PHASES = [
   { id: 'night', label: 'Nachtphase' },
 ];
 
-const TRACKER_KEYS = ['wood', 'food', 'fur', 'roof', 'palisade', 'weapon', 'morale'];
+/** @type {object} Globaler Spielstand */
+let gameState = createDefaultGameState();
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-function loadSave() {
+/**
+ * Frischer Spielstand (Hauptmenü).
+ * @returns {object}
+ */
+function createDefaultGameState() {
+  return {
+    phase: 'menu',
+    round: 1,
+    currentScenario: null,
+    scenarioName: '',
+    maxRounds: 12,
+    resources: {
+      wood: 0,
+      food: 0,
+      fur: 0,
+    },
+    camp: {
+      roof: 0,
+      palisade: 0,
+      weapon: 0,
+    },
+    morale: 0,
+    scenarioRuntime: null,
+  };
+}
+
+/**
+ * Szenario anhand Schlüssel (schiffbruechig) oder numerischer ID (1–7) finden.
+ * @param {string|number} scenarioId
+ * @returns {object|undefined}
+ */
+function resolveScenario(scenarioId) {
+  if (scenarioId == null) return undefined;
+
+  const asNumber = Number(scenarioId);
+  if (!Number.isNaN(asNumber) && String(scenarioId).match(/^\d+$/)) {
+    return SCENARIO_LIST.find((s) => s.id === asNumber);
+  }
+
+  return getScenario(String(scenarioId));
+}
+
+/**
+ * Partie starten: Szenario laden, Ansicht wechseln, speichern.
+ * @param {string|number} scenarioId
+ */
+function startGame(scenarioId) {
+  const scenario = resolveScenario(scenarioId);
+  if (!scenario) {
+    console.error('Unbekanntes Szenario:', scenarioId);
+    return;
+  }
+
+  const runtime = createInitialGameState(scenario.key);
+
+  gameState = {
+    ...createDefaultGameState(),
+    phase: 'morale',
+    round: 1,
+    currentScenario: scenario.key,
+    scenarioName: scenario.name,
+    maxRounds: scenario.maxRounds,
+    scenarioRuntime: runtime.scenarioRuntime,
+  };
+  syncGlobalState();
+
+  showDashboard();
+  updateUI();
+  saveGameState();
+}
+
+/**
+ * Hauptmenü anzeigen, Dashboard ausblenden.
+ */
+
+function syncGlobalState() {
+  if (typeof window !== 'undefined') {
+    window.gameState = gameState;
+  }
+}
+
+function showMenu() {
+  $('#main-menu')?.classList.add('view--active');
+  $('#game-dashboard')?.classList.remove('view--active');
+}
+
+/**
+ * Dashboard anzeigen, Hauptmenü ausblenden.
+ */
+function showDashboard() {
+  $('#main-menu')?.classList.remove('view--active');
+  $('#game-dashboard')?.classList.add('view--active');
+}
+
+/**
+ * DOM anhand von gameState aktualisieren.
+ */
+function updateUI() {
+  if (gameState.phase === 'menu') {
+    showMenu();
+    return;
+  }
+
+  showDashboard();
+
+  $('#dash-scenario-name').textContent = gameState.scenarioName || '—';
+  $('#dash-round').textContent = String(gameState.round);
+  $('#dash-phase').textContent = getPhaseLabel(gameState.phase);
+
+  setTrackerDisplay('wood', gameState.resources.wood);
+  setTrackerDisplay('food', gameState.resources.food);
+  setTrackerDisplay('fur', gameState.resources.fur);
+  setTrackerDisplay('roof', gameState.camp.roof);
+  setTrackerDisplay('palisade', gameState.camp.palisade);
+  setTrackerDisplay('weapon', gameState.camp.weapon);
+  setTrackerDisplay('morale', gameState.morale);
+}
+
+/**
+ * @param {string} key
+ * @param {number} value
+ */
+function setTrackerDisplay(key, value) {
+  const el = $(`#val-${key}`);
+  if (el) el.textContent = String(value);
+}
+
+/**
+ * @param {string} phaseId
+ * @returns {string}
+ */
+function getPhaseLabel(phaseId) {
+  if (phaseId === 'menu') return 'Hauptmenü';
+  return GAME_PHASES.find((p) => p.id === phaseId)?.label ?? phaseId;
+}
+
+/**
+ * Ressource oder Stärke per Tracker-Key anpassen.
+ * @param {string} key
+ * @param {number} delta
+ */
+function adjustResource(key, delta) {
+  if (gameState.phase === 'menu') return;
+
+  if (key === 'morale') {
+    gameState.morale += delta;
+  } else if (key in gameState.resources) {
+    gameState.resources[key] = Math.max(0, gameState.resources[key] + delta);
+  } else if (key in gameState.camp) {
+    gameState.camp[key] = Math.max(0, gameState.camp[key] + delta);
+  } else {
+    return;
+  }
+
+  updateUI();
+  saveGameState();
+}
+
+/**
+ * Nächste Spielphase (Runden-Ende → neue Runde).
+ */
+function nextPhase() {
+  if (gameState.phase === 'menu') return;
+
+  const idx = GAME_PHASES.findIndex((p) => p.id === gameState.phase);
+  let nextIdx = idx + 1;
+
+  if (nextIdx >= GAME_PHASES.length) {
+    const maxRounds = gameState.maxRounds ?? 12;
+    if (gameState.round >= maxRounds) {
+      saveGameState();
+      return;
+    }
+
+    gameState.round += 1;
+    nextIdx = gameState.round === 1
+      ? GAME_PHASES.findIndex((p) => p.id === 'morale')
+      : 0;
+  }
+
+  if (gameState.round === 1 && GAME_PHASES[nextIdx]?.id === 'event') {
+    nextIdx = GAME_PHASES.findIndex((p) => p.id === 'morale');
+  }
+
+  gameState.phase = GAME_PHASES[nextIdx].id;
+  updateUI();
+  saveGameState();
+}
+
+/**
+ * gameState in localStorage speichern.
+ */
+function saveGameState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+  } catch (err) {
+    console.error('Speichern fehlgeschlagen:', err);
+  }
+}
+
+/**
+ * gameState aus localStorage laden und mit Defaults mergen.
+ * @returns {boolean} true wenn ein Stand geladen wurde
+ */
+function loadGameState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
+    if (!raw) return false;
+
+    const saved = JSON.parse(raw);
+    gameState = mergeWithDefaults(saved);
+    return true;
+  } catch (err) {
+    console.error('Laden fehlgeschlagen:', err);
+    return false;
   }
 }
 
-function saveGame() {
-  if (!gameState) return;
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ appState, gameState })
-  );
-}
-
-function getPhaseLabel(phaseId) {
-  return PHASES.find((p) => p.id === phaseId)?.label ?? phaseId;
-}
-
-function defaultTrackers() {
+/**
+ * Gespeicherten Stand mit Default-Struktur abgleichen.
+ * @param {object} saved
+ * @returns {object}
+ */
+function mergeWithDefaults(saved) {
+  const defaults = createDefaultGameState();
   return {
-    wood: 0,
-    food: 0,
-    fur: 0,
-    roof: 0,
-    palisade: 0,
-    weapon: 0,
-    morale: 0,
+    ...defaults,
+    ...saved,
+    resources: { ...defaults.resources, ...(saved.resources || {}) },
+    camp: { ...defaults.camp, ...(saved.camp || {}) },
   };
-}
-
-function mergeGameState(base) {
-  return {
-    ...base,
-    trackers: { ...defaultTrackers(), ...(base.trackers || {}) },
-  };
-}
-
-function setView(viewName) {
-  const menu = $('#main-menu');
-  const dashboard = $('#game-dashboard');
-
-  if (viewName === 'menu') {
-    menu.classList.add('view--active');
-    dashboard.classList.remove('view--active');
-  } else {
-    menu.classList.remove('view--active');
-    dashboard.classList.add('view--active');
-  }
 }
 
 function renderScenarioButtons() {
@@ -90,7 +264,6 @@ function renderScenarioButtons() {
     btn.type = 'button';
     btn.className = 'btn-scenario';
     if (scenario.isExpansion) btn.classList.add('btn-scenario--expansion');
-    btn.dataset.scenarioKey = scenario.key;
     btn.setAttribute('role', 'listitem');
 
     btn.innerHTML = `
@@ -99,76 +272,9 @@ function renderScenarioButtons() {
       <span class="btn-scenario__desc">${scenario.description}</span>
     `;
 
-    btn.addEventListener('click', () => startScenario(scenario.key));
+    btn.addEventListener('click', () => startGame(scenario.key));
     container.appendChild(btn);
   });
-}
-
-function startScenario(scenarioKey) {
-  const base = createInitialGameState(scenarioKey);
-  const scenario = getScenario(scenarioKey);
-
-  gameState = mergeGameState({
-    ...base,
-    phase: base.round === 1 ? 'morale' : 'event',
-    trackers: defaultTrackers(),
-    scenarioName: scenario.name,
-    maxRounds: scenario.maxRounds,
-  });
-
-  appState = 'playing';
-  setView('playing');
-  updateDashboard();
-  saveGame();
-}
-
-function updateDashboard() {
-  if (!gameState) return;
-
-  const scenario = getScenario(gameState.currentScenario);
-  $('#dash-scenario-name').textContent =
-    gameState.scenarioName || scenario?.name || '—';
-  $('#dash-round').textContent = String(gameState.round);
-  $('#dash-phase').textContent = getPhaseLabel(gameState.phase);
-
-  TRACKER_KEYS.forEach((key) => {
-    const el = $(`#val-${key}`);
-    if (el) el.textContent = String(gameState.trackers[key] ?? 0);
-  });
-}
-
-function adjustTracker(key, delta) {
-  if (!gameState?.trackers) return;
-  const next = (gameState.trackers[key] ?? 0) + delta;
-  gameState.trackers[key] = Math.max(0, next);
-  updateDashboard();
-  saveGame();
-}
-
-function nextPhase() {
-  if (!gameState) return;
-
-  const idx = PHASES.findIndex((p) => p.id === gameState.phase);
-  let nextIdx = idx + 1;
-
-  if (nextIdx >= PHASES.length) {
-    gameState.round += 1;
-    const max = gameState.maxRounds ?? getScenario(gameState.currentScenario)?.maxRounds ?? 12;
-    if (gameState.round > max) {
-      gameState.round = max;
-      saveGame();
-      return;
-    }
-    nextIdx = gameState.round === 1 ? PHASES.findIndex((p) => p.id === 'morale') : 0;
-  }
-
-  if (gameState.round === 1 && PHASES[nextIdx]?.id === 'event') {
-    nextIdx = PHASES.findIndex((p) => p.id === 'morale');
-  }
-
-  gameState.phase = PHASES[nextIdx].id;
-  updateDashboard();
-  saveGame();
 }
 
 function bindEvents() {
@@ -179,7 +285,7 @@ function bindEvents() {
     row.querySelectorAll('.btn-counter').forEach((btn) => {
       btn.addEventListener('click', () => {
         const delta = btn.dataset.action === 'inc' ? 1 : -1;
-        adjustTracker(key, delta);
+        adjustResource(key, delta);
       });
     });
   });
@@ -191,17 +297,22 @@ function init() {
   renderScenarioButtons();
   bindEvents();
 
-  const saved = loadSave();
-  if (saved?.appState === 'playing' && saved.gameState?.currentScenario) {
-    appState = saved.appState;
-    gameState = mergeGameState(saved.gameState);
-    setView('playing');
-    updateDashboard();
+  if (loadGameState()) {
+    syncGlobalState();
+    updateUI();
   } else {
-    appState = 'menu';
-    gameState = null;
-    setView('menu');
+    gameState = createDefaultGameState();
+    syncGlobalState();
+    updateUI();
   }
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+if (typeof window !== 'undefined') {
+  window.startGame = startGame;
+  window.updateUI = updateUI;
+  window.saveGameState = saveGameState;
+  window.loadGameState = loadGameState;
+  syncGlobalState();
+}
