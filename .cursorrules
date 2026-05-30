@@ -10,3 +10,6 @@
 - Nutze CSS Grid und Flexbox.
 - Verwende ein dunkles, modernes Dashboard-Layout (Dark Mode).
 - Ersetze Standard-Browser-Alerts durch eigene, schön gestaltete HTML/CSS-Modals.
+
+# Git-Workflow
+- Committe und pushe Änderungen immer direkt auf den Branch `main` (keine Feature-Branches, keine separaten PRs für Routine-Arbeit).
