@@ -25,6 +25,15 @@
           <div class="dash-header__scenario">
             <span class="dash-label">Szenario</span>
             <p id="dash-scenario-name" class="dash-scenario-name">—</p>
+            <div class="dash-toolbar">
+              <button type="button" id="btn-save-game" class="btn-toolbar">
+                Speichern
+              </button>
+              <span id="save-feedback" class="save-feedback" hidden aria-live="polite"></span>
+              <button type="button" id="btn-reset-game" class="btn-toolbar btn-toolbar--danger">
+                Mission wechseln
+              </button>
+            </div>
           </div>
           <div class="dash-header__hero" aria-live="polite">
             <p class="dash-hero__round">

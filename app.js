@@ -397,9 +397,67 @@ function saveGameState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
     syncGlobalState();
+    return true;
   } catch (err) {
     console.error('Speichern fehlgeschlagen:', err);
+    return false;
   }
+}
+
+let saveFeedbackTimer = null;
+
+function showSaveFeedback(message, isError = false) {
+  const el = $('#save-feedback');
+  if (!el) return;
+  el.textContent = message;
+  el.hidden = false;
+  el.classList.toggle('save-feedback--error', isError);
+  clearTimeout(saveFeedbackTimer);
+  saveFeedbackTimer = setTimeout(() => {
+    el.hidden = true;
+    el.classList.remove('save-feedback--error');
+  }, 2500);
+}
+
+function manualSaveGame() {
+  if (gameState.phase === 'menu') {
+    showSaveFeedback('Kein laufendes Spiel', true);
+    return;
+  }
+  if (saveGameState()) {
+    showSaveFeedback('Gespeichert');
+  } else {
+    showSaveFeedback('Speichern fehlgeschlagen', true);
+  }
+}
+
+function resetToMenu() {
+  showModal({
+    title: 'Zurück zur Missionsauswahl',
+    body: 'Aktuelles Spiel beenden und ein neues Szenario wählen? Ungespeicherter Fortschritt geht verloren.',
+    buttons: [
+      { label: 'Abbrechen' },
+      {
+        label: 'Beenden',
+        primary: true,
+        warn: true,
+        close: false,
+        onClick: () => {
+          gameState = createDefaultGameState();
+          syncGlobalState();
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (err) {
+            console.error('Speicher löschen fehlgeschlagen:', err);
+          }
+          pendingCombatResult = null;
+          closeCombatModal();
+          hideModal();
+          updateUI();
+        },
+      },
+    ],
+  });
 }
 
 function loadGameState() {
@@ -597,6 +655,8 @@ function bindEvents() {
   $('#btn-players-inc')?.addEventListener('click', () => adjustResource('players', 1));
   $('#btn-players-dec')?.addEventListener('click', () => adjustResource('players', -1));
   $('#btn-next-phase')?.addEventListener('click', nextPhase);
+  $('#btn-save-game')?.addEventListener('click', manualSaveGame);
+  $('#btn-reset-game')?.addEventListener('click', resetToMenu);
   $('#btn-combat')?.addEventListener('click', openCombatModal);
   $('#btn-combat-calculate')?.addEventListener('click', calculateCombat);
   $('#btn-combat-confirm')?.addEventListener('click', confirmCombatResult);
@@ -638,6 +698,8 @@ if (typeof window !== 'undefined') {
   window.updateUI = updateUI;
   window.nextPhase = nextPhase;
   window.saveGameState = saveGameState;
+  window.manualSaveGame = manualSaveGame;
+  window.resetToMenu = resetToMenu;
   window.loadGameState = loadGameState;
   window.showModal = showModal;
   window.hideModal = hideModal;
