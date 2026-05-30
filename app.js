@@ -431,6 +431,93 @@ function manualSaveGame() {
   }
 }
 
+const SAVE_FILE_VERSION = 1;
+
+function buildSavePayload() {
+  return {
+    version: SAVE_FILE_VERSION,
+    exportedAt: new Date().toISOString(),
+    gameState,
+  };
+}
+
+function slugifyFilename(text) {
+  return (
+    String(text || 'spiel')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'spiel'
+  );
+}
+
+function exportGameStateToJsonFile() {
+  if (gameState.phase === 'menu') {
+    showSaveFeedback('Kein laufendes Spiel', true);
+    return;
+  }
+
+  const payload = buildSavePayload();
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const slug = slugifyFilename(gameState.scenarioName);
+  const date = new Date().toISOString().slice(0, 10);
+
+  link.href = url;
+  link.download = `spielleiter-${slug}-r${gameState.round}-${date}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+
+  saveGameState();
+  showSaveFeedback('JSON-Datei gespeichert');
+}
+
+function applyImportedGameState(saved) {
+  const merged = mergeWithDefaults(saved);
+  if (merged.phase === 'menu' || !merged.currentScenario) {
+    showSaveFeedback('Keine gültige Partie in der Datei', true);
+    return false;
+  }
+  gameState = merged;
+  syncGlobalState();
+  saveGameState();
+  pendingCombatResult = null;
+  closeCombatModal();
+  updateUI();
+  showSaveFeedback('JSON geladen');
+  return true;
+}
+
+function importGameStateFromJsonFile(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const saved = parsed.gameState ?? parsed;
+      applyImportedGameState(saved);
+    } catch (err) {
+      console.error('JSON laden fehlgeschlagen:', err);
+      showSaveFeedback('JSON ungültig', true);
+    }
+  };
+  reader.onerror = () => {
+    showSaveFeedback('Datei konnte nicht gelesen werden', true);
+  };
+  reader.readAsText(file);
+}
+
+function openJsonFilePicker() {
+  const input = $('#input-load-json');
+  if (!input) return;
+  input.value = '';
+  input.click();
+}
+
 function resetToMenu() {
   showModal({
     title: 'Zurück zur Missionsauswahl',
@@ -656,6 +743,12 @@ function bindEvents() {
   $('#btn-players-dec')?.addEventListener('click', () => adjustResource('players', -1));
   $('#btn-next-phase')?.addEventListener('click', nextPhase);
   $('#btn-save-game')?.addEventListener('click', manualSaveGame);
+  $('#btn-export-json')?.addEventListener('click', exportGameStateToJsonFile);
+  $('#btn-load-json')?.addEventListener('click', openJsonFilePicker);
+  $('#input-load-json')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    importGameStateFromJsonFile(file);
+  });
   $('#btn-reset-game')?.addEventListener('click', resetToMenu);
   $('#btn-combat')?.addEventListener('click', openCombatModal);
   $('#btn-combat-calculate')?.addEventListener('click', calculateCombat);
@@ -699,6 +792,8 @@ if (typeof window !== 'undefined') {
   window.nextPhase = nextPhase;
   window.saveGameState = saveGameState;
   window.manualSaveGame = manualSaveGame;
+  window.exportGameStateToJsonFile = exportGameStateToJsonFile;
+  window.importGameStateFromJsonFile = importGameStateFromJsonFile;
   window.resetToMenu = resetToMenu;
   window.loadGameState = loadGameState;
   window.showModal = showModal;

@@ -29,6 +29,18 @@
               <button type="button" id="btn-save-game" class="btn-toolbar">
                 Speichern
               </button>
+              <button type="button" id="btn-export-json" class="btn-toolbar">
+                JSON speichern
+              </button>
+              <button type="button" id="btn-load-json" class="btn-toolbar">
+                JSON laden
+              </button>
+              <input
+                type="file"
+                id="input-load-json"
+                accept=".json,application/json"
+                hidden
+              />
               <span id="save-feedback" class="save-feedback" hidden aria-live="polite"></span>
               <button type="button" id="btn-reset-game" class="btn-toolbar btn-toolbar--danger">
                 Mission wechseln
